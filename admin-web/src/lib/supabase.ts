@@ -42,6 +42,16 @@ const disabledQuery: any = {
     return disabledQuery;
   },
   in: () => disabledQuery,
+  contains: () => disabledQuery,
+  or: () => disabledQuery,
+  neq: () => disabledQuery,
+  gte: () => disabledQuery,
+  lte: () => disabledQuery,
+  gt: () => disabledQuery,
+  lt: () => disabledQuery,
+  like: () => disabledQuery,
+  ilike: () => disabledQuery,
+  limit: () => disabledQuery,
   order: () => disabledQuery,
   maybeSingle: async () => {
     const session = getLocalSession();

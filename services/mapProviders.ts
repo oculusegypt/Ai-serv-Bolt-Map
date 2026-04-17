@@ -1,6 +1,6 @@
 // Mock Provider locations for map display (around Cairo)
 import { ServiceId } from '../constants/config';
-import { supabase } from './supabaseClient';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { getProviderLocations } from './providerLocations';
 
 export interface MapProvider {
@@ -235,6 +235,10 @@ function isFresh(updatedAt: string | null | undefined): boolean {
 }
 
 export async function getMapProvidersForServiceAsync(serviceId: ServiceId): Promise<MapProvider[]> {
+  if (!isSupabaseConfigured) {
+    return getMapProvidersForService(serviceId);
+  }
+
   const { data, error } = await supabase
     .from('profiles')
     .select('id,name,phone,avatar,services,role')

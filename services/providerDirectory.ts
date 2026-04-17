@@ -1,6 +1,7 @@
-import { supabase } from './supabaseClient';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
 import type { ServiceId } from '../constants/config';
 import type { Provider } from './mockData';
+import { getProvidersForService } from './mockData';
 
 type UserCoord = { latitude: number; longitude: number };
 
@@ -74,6 +75,13 @@ export async function refreshProvidersCache(params: {
   userCoord?: UserCoord | null;
 }): Promise<{ ok: boolean; error?: string; count?: number }> {
   const { serviceId, userCoord } = params;
+
+  if (!isSupabaseConfigured) {
+    const providers = getProvidersForService(serviceId);
+    cache.byService[serviceId] = providers;
+    cache.lastLoadedAt[serviceId] = Date.now();
+    return { ok: true, count: providers.length };
+  }
 
   const fetchProfiles = async (sid: string) => {
     return await supabase
