@@ -7,7 +7,7 @@ const pool = process.env.DATABASE_URL ? new Pool({ connectionString: process.env
 
 const columns: Record<string, string[]> = {
   profiles: ['id', 'email', 'phone', 'name', 'role', 'avatar', 'services', 'documents', 'created_at'],
-  orders: ['id', 'order_number', 'customer_id', 'provider_id', 'service_id', 'service_name', 'status', 'total_price', 'address', 'scheduled_date', 'scheduled_time', 'rating', 'created_at', 'cancelled_by', 'cancel_reason', 'cancelled_at', 'refund_status', 'refund_amount', 'refund_method', 'refund_reference'],
+  orders: ['id', 'order_number', 'customer_id', 'provider_id', 'service_id', 'service_name', 'status', 'total_price', 'address', 'latitude', 'longitude', 'scheduled_date', 'scheduled_time', 'rating', 'created_at', 'cancelled_by', 'cancel_reason', 'cancelled_at', 'refund_status', 'refund_amount', 'refund_method', 'refund_reference'],
   services: ['id', 'name_ar', 'description_ar', 'is_active', 'sort_order', 'created_at', 'updated_at'],
   regions: ['id', 'slug', 'name', 'extra_fee', 'min_lat', 'max_lat', 'min_lng', 'max_lng', 'is_active', 'created_at'],
   service_chat_flows: ['id', 'service_id', 'region_id', 'flow_json', 'updated_at'],

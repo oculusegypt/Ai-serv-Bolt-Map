@@ -2,6 +2,14 @@
 
 This project is an Expo Router mobile/web app with a separate Next.js admin web app in `admin-web/`.
 
+# Mandatory Project Memory
+
+Before making future changes, read these Arabic reference files first to avoid re-scanning the whole codebase unnecessarily:
+
+- `ذاكرة_النظام.md`: architecture memory, lifecycle, migration status, database relationships, and known risks.
+- `هيكل_المشروع.md`: full file/folder structure and quick map for where to edit.
+- `سجل_التحديثات.md`: migration/change log and next-step guidance.
+
 # Current Replit Migration Notes
 
 - The Replit workflow runs the Expo web preview on port 5000 and the admin web app on port 3000.
@@ -12,6 +20,7 @@ This project is an Expo Router mobile/web app with a separate Next.js admin web 
 - Supabase-dependent Expo client flows fail safely when Supabase environment variables are missing instead of crashing the Replit preview.
 - The Expo app includes a local development authentication fallback when Supabase env vars are not configured, so login/register work in the Replit preview.
 - The admin web app includes a local development admin session fallback when Supabase env vars are not configured.
+- `orders.latitude` and `orders.longitude` are included in `server/schema.sql` and the admin data API whitelist because the Expo order service reads/writes order coordinates.
 - Do not put service secrets in `app.json` or any client-exposed `EXPO_PUBLIC_*` variable.
 
 # Required Environment Variables

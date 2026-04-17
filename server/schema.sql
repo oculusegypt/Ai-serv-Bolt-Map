@@ -29,6 +29,8 @@ create table if not exists public.orders (
   status text not null default 'pending',
   total_price int not null,
   address text not null,
+  latitude double precision,
+  longitude double precision,
   scheduled_date text,
   scheduled_time text,
   rating int,
