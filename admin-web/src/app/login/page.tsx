@@ -20,7 +20,8 @@ export default function LoginPage() {
     });
   }, [router]);
 
-  const onSubmit = async () => {
+  const onSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!email.includes('@') || password.length < 6) {
       setError('بيانات الدخول غير صحيحة');
       return;
@@ -76,14 +77,16 @@ export default function LoginPage() {
             <div className="text-sm font-black">دخول لوحة التحكم</div>
           </div>
 
-          <div className="grid gap-3">
+          <form className="grid gap-3" onSubmit={onSubmit}>
             <div>
               <label className="block text-xs font-extrabold text-white/80">البريد الإلكتروني</label>
               <input
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-white/40 focus:border-brand-300"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                type="email"
                 placeholder="name@example.com"
+                autoComplete="email"
                 autoCapitalize="none"
                 autoCorrect="off"
               />
@@ -97,6 +100,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 type="password"
+                autoComplete="current-password"
               />
             </div>
 
@@ -107,8 +111,8 @@ export default function LoginPage() {
             ) : null}
 
             <button
+              type="submit"
               className="mt-1 inline-flex w-full items-center justify-center rounded-2xl bg-brand-600 px-4 py-3 text-sm font-extrabold text-white shadow-card hover:bg-brand-700 disabled:opacity-50"
-              onClick={onSubmit}
               disabled={loading}
             >
               {loading ? 'جاري الدخول...' : 'دخول'}
@@ -117,7 +121,7 @@ export default function LoginPage() {
             <div className="text-xs font-semibold text-white/70">
               ملاحظة: صلاحيات الأدمن تُدار من جدول profiles في Supabase (role=admin)
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>
