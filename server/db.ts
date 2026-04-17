@@ -1,4 +1,5 @@
 import pg from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
 
 const { Pool } = pg;
 
@@ -9,6 +10,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const db = drizzle(pool);
 
 export async function query<T = unknown>(text: string, values: unknown[] = []) {
   return pool.query<T>(text, values);

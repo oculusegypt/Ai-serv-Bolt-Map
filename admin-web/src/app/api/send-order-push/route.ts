@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pg from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { sql } from 'drizzle-orm';
 
 const { Pool } = pg;
 
@@ -10,6 +12,7 @@ type Payload = {
 };
 
 const pool = process.env.DATABASE_URL ? new Pool({ connectionString: process.env.DATABASE_URL }) : null;
+const db = pool ? drizzle(pool) : null;
 
 const statusLabelMap: Record<string, string> = {
   pending: 'بانتظار القبول',
@@ -30,7 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
   }
 
-  if (!pool) {
+  if (!db) {
     return NextResponse.json({ ok: false, error: 'database_not_configured' }, { status: 500 });
   }
 
@@ -45,15 +48,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'invalid_payload' }, { status: 400 });
   }
 
-  const orderResult = await pool.query<{
+  const orderResult = await db.execute(sql<{
     id: string;
     order_number: string;
     customer_id: string | null;
     provider_id: string | null;
-  }>(
-    'select id, order_number, customer_id, provider_id from orders where id = $1 limit 1',
-    [payload.orderId]
-  );
+  }>`select id, order_number, customer_id, provider_id from orders where id = ${payload.orderId} limit 1`);
 
   const orderRow = orderResult.rows[0];
   if (!orderRow) return NextResponse.json({ ok: false, error: 'order_not_found' }, { status: 404 });
@@ -61,10 +61,7 @@ export async function POST(req: NextRequest) {
   const targetIds = [orderRow.customer_id, orderRow.provider_id].filter(Boolean) as string[];
   if (targetIds.length === 0) return NextResponse.json({ ok: true, sent: 0 });
 
-  const tokenResult = await pool.query<{ expo_push_token: string }>(
-    'select expo_push_token from push_tokens where user_id = any($1::uuid[])',
-    [targetIds]
-  );
+  const tokenResult = await db.execute(sql<{ expo_push_token: string }>`select expo_push_token from push_tokens where user_id = any(${targetIds}::uuid[])`);
 
   const tokens = tokenResult.rows
     .map((row) => row.expo_push_token)

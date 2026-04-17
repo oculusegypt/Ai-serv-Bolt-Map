@@ -8,7 +8,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "db:push": "node ./scripts/db-push.js"
   },
   "dependencies": {
     "@apollo/client": "^3.4.10",
@@ -43,6 +44,7 @@
     "autoprefixer": "^10.5.0",
     "date-fns": "^2.28.0",
     "dedent": "^0.7.0",
+    "drizzle-orm": "^0.45.2",
     "es6-error": "^4.1.1",
     "expo": "~53.0.9",
     "expo-application": "~6.1.4",
