@@ -12,14 +12,38 @@ const isValidUrl = (url: string) => {
   }
 };
 
-const resolvedUrl = isValidUrl(supabaseUrl) ? supabaseUrl : 'https://placeholder.supabase.co';
-const resolvedKey = supabaseAnonKey || 'placeholder-key';
+export const isSupabaseConfigured = isValidUrl(supabaseUrl) && !!supabaseAnonKey;
 
-export const supabase = createClient(resolvedUrl, resolvedKey, {
+const disabledResult = async () => ({
+  data: null,
+  error: { message: 'Supabase is not configured for this Replit environment.' },
+});
+
+const disabledQuery: any = {
+  select: () => disabledQuery,
+  insert: () => disabledQuery,
+  update: () => disabledQuery,
+  delete: () => disabledQuery,
+  upsert: () => disabledQuery,
+  eq: () => disabledQuery,
+  in: () => disabledQuery,
+  order: () => disabledQuery,
+  maybeSingle: disabledResult,
+  then: (resolve: any, reject: any) => disabledResult().then(resolve, reject),
+};
+
+const disabledSupabase: any = {
+  auth: {
+    getSession: async () => ({ data: { session: null }, error: null }),
+    signInWithPassword: async () => ({ data: null, error: { message: 'Authentication is not configured.' } }),
+    signOut: async () => ({ error: null }),
+  },
+  from: () => disabledQuery,
+};
+
+export const supabase = isSupabaseConfigured ? createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
   },
-});
-
-export const isSupabaseConfigured = isValidUrl(supabaseUrl) && !!supabaseAnonKey;
+}) : disabledSupabase;

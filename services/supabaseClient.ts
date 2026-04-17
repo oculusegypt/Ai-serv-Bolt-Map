@@ -4,9 +4,17 @@ import { Platform } from 'react-native';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase env vars: EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY');
-}
+const isValidUrl = (url?: string) => {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+};
+
+export const isSupabaseConfigured = isValidUrl(supabaseUrl) && !!supabaseAnonKey;
 
 function createMemoryStorage(): {
   getItem: (key: string) => Promise<string | null>;
@@ -53,11 +61,54 @@ const storage = (() => {
   return createMemoryStorage();
 })();
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+const disabledResult = async () => ({
+  data: null,
+  error: { message: 'Supabase is not configured for this Replit environment.' },
+});
+
+const disabledQuery: any = {
+  select: () => disabledQuery,
+  insert: () => disabledQuery,
+  update: () => disabledQuery,
+  delete: () => disabledQuery,
+  upsert: () => disabledQuery,
+  eq: () => disabledQuery,
+  in: () => disabledQuery,
+  order: () => disabledQuery,
+  limit: () => disabledQuery,
+  maybeSingle: disabledResult,
+  single: disabledResult,
+  then: (resolve: any, reject: any) => disabledResult().then(resolve, reject),
+};
+
+const disabledSupabase: any = {
+  auth: {
+    getSession: async () => ({ data: { session: null }, error: null }),
+    getUser: async () => ({ data: { user: null }, error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    signInWithPassword: async () => ({ data: null, error: { message: 'Authentication is not configured.' } }),
+    signUp: async () => ({ data: { user: null, session: null }, error: { message: 'Authentication is not configured.' } }),
+    signOut: async () => ({ error: null }),
+  },
+  from: () => disabledQuery,
+  channel: () => ({ on: () => disabledSupabase.channel(), subscribe: () => ({}) }),
+  removeChannel: () => {},
+  storage: {
+    from: () => ({
+      upload: async () => ({ data: null, error: { message: 'Storage is not configured.' } }),
+      getPublicUrl: () => ({ data: { publicUrl: '' } }),
+    }),
+  },
+  functions: {
+    invoke: async () => ({ data: null, error: { message: 'Functions are not configured.' } }),
+  },
+};
+
+export const supabase = isSupabaseConfigured ? createClient(supabaseUrl!, supabaseAnonKey!, {
   auth: {
     storage,
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: Platform.OS === 'web' && isBrowser,
   },
-});
+}) : disabledSupabase;
