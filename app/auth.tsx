@@ -135,7 +135,7 @@ export default function AuthScreen() {
             </Pressable>
 
             <Text style={styles.demoHint}>
-              أنشئ حسابك ببريدك الإلكتروني ثم فعّله من الرسالة
+              في المعاينة يمكنك إنشاء حساب أو تسجيل الدخول بأي بريد وكلمة مرور
             </Text>
           </Animated.View>
         </ScrollView>

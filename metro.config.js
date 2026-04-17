@@ -1,4 +1,5 @@
 const { getDefaultConfig } = require('expo/metro-config');
+const exclusionList = require('metro-config/src/defaults/exclusionList');
 
 const config = getDefaultConfig(__dirname);
 
@@ -6,6 +7,7 @@ const { resolver } = config;
 
 config.resolver = {
   ...resolver,
+  blockList: exclusionList([/admin-web\/\.next\/.*/]),
   resolveRequest: (context, moduleName, platform) => {
     if (platform === 'web' && moduleName === 'react-native-maps') {
       return {

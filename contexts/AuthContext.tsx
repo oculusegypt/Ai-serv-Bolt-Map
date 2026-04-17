@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import * as Linking from 'expo-linking';
-import { supabase } from '../services/supabaseClient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 
 export type UserRole = 'customer' | 'provider' | 'admin';
@@ -51,6 +52,28 @@ type ProfileRow = {
   created_at: string;
 };
 
+type LocalUserRecord = UserProfile & {
+  password: string;
+};
+
+const localUsersKey = 'khidmati.localAuth.users';
+const localSessionKey = 'khidmati.localAuth.sessionUserId';
+
+const readLocalUsers = async (): Promise<LocalUserRecord[]> => {
+  const raw = await AsyncStorage.getItem(localUsersKey);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeLocalUsers = async (users: LocalUserRecord[]) => {
+  await AsyncStorage.setItem(localUsersKey, JSON.stringify(users));
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,6 +93,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshUsers = useCallback(async () => {
+    if (!isSupabaseConfigured) {
+      const localUsers = await readLocalUsers();
+      setAllUsers(localUsers.map(({ password, ...profile }) => profile));
+      return;
+    }
+
     const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
     if (error || !data) {
       setAllUsers([]);
@@ -123,6 +152,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadSession = async () => {
     try {
+      if (!isSupabaseConfigured) {
+        const [sessionUserId, localUsers] = await Promise.all([
+          AsyncStorage.getItem(localSessionKey),
+          readLocalUsers(),
+        ]);
+        const record = localUsers.find((u) => u.id === sessionUserId);
+        if (record) {
+          const { password, ...profile } = record;
+          setUser(profile);
+          setIsAuthenticated(true);
+        } else {
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+        setAllUsers(localUsers.map(({ password, ...profile }) => profile));
+        return;
+      }
+
       const { data, error } = await withTimeout(supabase.auth.getSession(), 8000, 'auth.getSession');
       if (error) throw error;
       const sessionUser = data.session?.user;
@@ -230,6 +277,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = useCallback(async (email: string, password: string) => {
+    if (!isSupabaseConfigured) {
+      const normalizedEmail = email.trim().toLowerCase();
+      const localUsers = await readLocalUsers();
+      let record = localUsers.find((u) => u.email.toLowerCase() === normalizedEmail);
+
+      if (record && record.password !== password) {
+        return { ok: false, error: 'كلمة المرور غير صحيحة' };
+      }
+
+      if (!record) {
+        record = {
+          id: `local-${Date.now()}`,
+          email: normalizedEmail,
+          password,
+          name: normalizedEmail.split('@')[0] || 'مستخدم',
+          role: 'customer',
+          createdAt: new Date().toISOString(),
+        };
+        localUsers.unshift(record);
+        await writeLocalUsers(localUsers);
+      }
+
+      await AsyncStorage.setItem(localSessionKey, record.id);
+      const { password: _password, ...profile } = record;
+      setUser(profile);
+      setIsAuthenticated(true);
+      setAllUsers(localUsers.map(({ password, ...profile }) => profile));
+      return { ok: true };
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { ok: false, error: error.message };
 
@@ -244,6 +321,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const register = useCallback(async (data: RegisterData) => {
+    if (!isSupabaseConfigured) {
+      const normalizedEmail = data.email.trim().toLowerCase();
+      const localUsers = await readLocalUsers();
+      const existingIndex = localUsers.findIndex((u) => u.email.toLowerCase() === normalizedEmail);
+      const record: LocalUserRecord = {
+        id: existingIndex >= 0 ? localUsers[existingIndex].id : `local-${Date.now()}`,
+        email: normalizedEmail,
+        password: data.password,
+        phone: data.phone,
+        name: data.name,
+        role: data.role,
+        services: data.services,
+        createdAt: existingIndex >= 0 ? localUsers[existingIndex].createdAt : new Date().toISOString(),
+      };
+
+      if (existingIndex >= 0) {
+        localUsers[existingIndex] = record;
+      } else {
+        localUsers.unshift(record);
+      }
+
+      await writeLocalUsers(localUsers);
+      await AsyncStorage.setItem(localSessionKey, record.id);
+      const { password, ...profile } = record;
+      setUser(profile);
+      setIsAuthenticated(true);
+      setAllUsers(localUsers.map(({ password, ...profile }) => profile));
+      return { ok: true };
+    }
+
     const emailRedirectTo = Linking.createURL('auth');
     const { data: authData, error } = await supabase.auth.signUp({
       email: data.email,
@@ -297,7 +404,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await supabase.auth.signOut();
+      if (isSupabaseConfigured) {
+        await supabase.auth.signOut();
+      } else {
+        await AsyncStorage.removeItem(localSessionKey);
+      }
     } catch {}
     setUser(null);
     setIsAuthenticated(false);
